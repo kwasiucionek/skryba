@@ -1,0 +1,28 @@
+{% extends "documents/base.html" %}
+{% block content %}
+<h1>Zapytaj archiwum</h1>
+<p class="count">Zadaj pytanie w naturalnym języku. Odpowiedź powstaje wyłącznie na podstawie Twoich dokumentów, z odwołaniem do źródeł.</p>
+
+<form method="get" class="ask-field" style="margin-bottom:1.25rem">
+    <input type="text" name="q" value="{{ question }}" placeholder="np. Jaki jest termin zapłaty faktury od Neurosoft?">
+    <button type="submit">Zapytaj</button>
+</form>
+
+{% if answer %}
+    <div class="panel">
+        <h2>Odpowiedź</h2>
+        <p style="white-space:pre-wrap;margin-bottom:0">{{ answer }}</p>
+    </div>
+
+    {% if sources %}
+        <h3>Źródła</h3>
+        {% for s in sources %}
+            <div class="doc">
+                <span class="badge">[{{ s.label }}]</span>
+                <a class="doc__title" href="{% url 'documents:detail' s.doc_id %}">{{ s.title }}</a>
+                <span class="doc__meta">strona {{ s.page }}</span>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endif %}
+{% endblock %}

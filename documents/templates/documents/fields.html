@@ -1,0 +1,51 @@
+{% extends "documents/base.html" %}
+{% block content %}
+<h1>Pola użytkownika</h1>
+<p class="count">Zdefiniuj własne pola metadanych z instrukcją dla AI. Po dodaniu pola
+użyj „Ponów metadane” na dokumencie, aby je wypełnić (nowe dokumenty wypełnią się automatycznie).</p>
+
+<div class="panel">
+    <h2>Nowe pole</h2>
+    <form method="post">
+        {% csrf_token %}
+        <p>
+            <label for="id_name">Nazwa</label><br>
+            <input type="text" id="id_name" name="name" placeholder="np. NIP sprzedawcy" style="width:100%;max-width:360px" required>
+        </p>
+        <p>
+            <label for="id_type">Typ</label><br>
+            <select id="id_type" name="field_type">
+                {% for value, label in field_types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+        </p>
+        <p>
+            <label for="id_prompt">Instrukcja dla AI</label><br>
+            <textarea id="id_prompt" name="prompt" rows="3" style="width:100%;max-width:560px"
+                placeholder="np. Wyodrębnij numer NIP sprzedawcy (10 cyfr). Jeśli go nie ma, zwróć null." required></textarea>
+        </p>
+        <button type="submit">Dodaj pole</button>
+    </form>
+</div>
+
+{% if fields %}
+    <h2>Zdefiniowane pola</h2>
+    {% for field in fields %}
+        <div class="doc">
+            <div>
+                <strong class="doc__title">{{ field.name }}</strong>
+                <span class="badge">{{ field.get_field_type_display }}</span>
+                <span class="badge">{{ field.key }}</span>
+            </div>
+            <p class="doc__summary">{{ field.prompt }}</p>
+            <div class="actions" style="margin:.5rem 0 0">
+                <form method="post" action="{% url 'documents:custom_field_delete' field.pk %}"
+                      onsubmit="return confirm('Usunąć pole „{{ field.name }}”? Wartości w dokumentach pozostaną w danych, ale przestaną być etykietowane.')">
+                    {% csrf_token %}<button type="submit" class="btn-link btn-danger">Usuń</button>
+                </form>
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <p class="count">Nie masz jeszcze żadnych własnych pól.</p>
+{% endif %}
+{% endblock %}

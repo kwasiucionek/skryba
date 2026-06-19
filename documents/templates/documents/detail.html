@@ -1,0 +1,76 @@
+{% extends "documents/base.html" %}
+{% block content %}
+<h1>{{ document.title }}</h1>
+<p class="doc__meta">
+    Tryb: {{ document.get_mode_display }}
+    {% if document.status == "done" %}· RAG: {% if document.indexed %}zindeksowano{% else %}brak indeksu{% endif %}{% endif %}
+    · <span class="status status--{{ document.status }}">{{ document.get_status_display }}</span>
+</p>
+
+<div class="actions">
+    <a class="btn-link" href="{% url 'documents:edit' document.pk %}">Edytuj tekst</a>
+    {% if document.searchable_pdf %}
+        <a class="btn-link" href="{{ document.searchable_pdf.url }}" download>Pobierz PDF z tekstem</a>
+    {% endif %}
+    <form method="post" action="{% url 'documents:reprocess' document.pk 'ocr' %}"
+          onsubmit="return confirm('Ponowny OCR nadpisze obecny tekst, metadane i indeks. Kontynuować?')">
+        {% csrf_token %}<button type="submit" class="btn-link">Ponów OCR</button>
+    </form>
+    <form method="post" action="{% url 'documents:reprocess' document.pk 'extraction' %}">
+        {% csrf_token %}<button type="submit" class="btn-link">Ponów metadane</button>
+    </form>
+    <form method="post" action="{% url 'documents:reprocess' document.pk 'indexing' %}">
+        {% csrf_token %}<button type="submit" class="btn-link">Przeindeksuj (RAG)</button>
+    </form>
+    <form method="post" action="{% url 'documents:delete' document.pk %}"
+          onsubmit="return confirm('Usunąć ten dokument na stałe?')">
+        {% csrf_token %}<button type="submit" class="btn-link btn-danger">Usuń</button>
+    </form>
+</div>
+
+{% if document.extraction_error %}
+    <div class="warn"><strong>Nie udało się wyodrębnić metadanych.</strong>
+        <code>{{ document.extraction_error }}</code>
+        Usuń przyczynę i użyj „Ponów metadane".</div>
+{% endif %}
+{% if document.indexing_error %}
+    <div class="warn"><strong>Nie udało się zindeksować do wyszukiwania.</strong>
+        <code>{{ document.indexing_error }}</code>
+        Ten dokument nie jest przeszukiwalny semantycznie. Najczęstsza przyczyna:
+        brak modelu embeddingów (<code>ollama pull nomic-embed-text</code>),
+        potem „Przeindeksuj (RAG)".</div>
+{% endif %}
+
+{% if document.status == "done" %}
+    {% if document.doc_type or document.summary or custom_rows %}
+        <div class="panel">
+            <h2>Metadane</h2>
+            <table>
+                {% if document.doc_type %}<tr><td><strong>Typ</strong></td><td>{{ document.get_doc_type_display }}</td></tr>{% endif %}
+                {% if document.doc_date %}<tr><td><strong>Data</strong></td><td>{{ document.doc_date|date:"Y-m-d" }}</td></tr>{% endif %}
+                {% if document.doc_number %}<tr><td><strong>Numer</strong></td><td>{{ document.doc_number }}</td></tr>{% endif %}
+                {% if document.counterparty %}<tr><td><strong>Kontrahent</strong></td><td>{{ document.counterparty }}</td></tr>{% endif %}
+                {% if document.amount %}<tr><td><strong>Kwota</strong></td><td>{{ document.amount }} {{ document.currency }}</td></tr>{% endif %}
+                {% for row in custom_rows %}<tr><td><strong>{{ row.label }}</strong></td><td>{{ row.value }}</td></tr>{% endfor %}
+            </table>
+            {% if document.summary %}<p style="margin-bottom:0"><em>{{ document.summary }}</em></p>{% endif %}
+            {% if document.tags %}<div class="doc__tags">{% for tag in document.tags %}<span class="badge">{{ tag }}</span> {% endfor %}</div>{% endif %}
+        </div>
+    {% elif not document.extraction_error %}
+        <p class="count">Analiza metadanych w toku…</p>
+    {% endif %}
+
+    <h2>Rozpoznany tekst</h2>
+    {% for page in document.pages.all %}
+        <h3>Strona {{ page.page_number }}
+            <small>({{ page.source }}{% if page.engine_name %}, {{ page.engine_name }}{% endif %})</small>
+        </h3>
+        <pre>{{ page.text }}</pre>
+    {% endfor %}
+{% elif document.status == "failed" %}
+    <div class="warn"><strong>OCR się nie powiódł.</strong> <code>{{ document.error_message }}</code>
+        Usuń przyczynę i użyj „Ponów OCR" powyżej.</div>
+{% else %}
+    {% include "documents/_status.html" %}
+{% endif %}
+{% endblock %}

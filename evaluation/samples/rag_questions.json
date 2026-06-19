@@ -1,0 +1,12 @@
+[
+  {
+    "question": "Jaki jest termin zapłaty faktury od Neurosoft?",
+    "relevant_titles": ["Faktura FV/2026/03/0042"],
+    "expected_substrings": ["14 dni"]
+  },
+  {
+    "question": "Na jaki okres zawarto umowę najmu?",
+    "relevant_titles": ["Umowa najmu lokalu"],
+    "expected_substrings": ["12", "miesi"]
+  }
+]

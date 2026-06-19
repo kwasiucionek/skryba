@@ -1,0 +1,28 @@
+{% extends "documents/base.html" %}
+{% block content %}
+<h1>Dodaj dokumenty</h1>
+<p class="count">Wgraj jeden lub wiele plików naraz (PDF lub zdjęcia). Każdy zostanie
+rozpoznany osobno, z wyodrębnieniem metadanych i przygotowaniem do wyszukiwania.</p>
+
+<form method="post" enctype="multipart/form-data" class="panel">
+    {% csrf_token %}
+    <p>
+        <label for="id_files">Pliki</label><br>
+        <input type="file" id="id_files" name="files" accept=".pdf,image/*" multiple required>
+        <br><small>Możesz zaznaczyć wiele plików (Ctrl/⌘ lub Shift).</small>
+    </p>
+    <p>
+        <label for="id_title">Tytuł (opcjonalnie)</label><br>
+        <input type="text" id="id_title" name="title" placeholder="np. Umowa najmu — marzec" style="width:100%;max-width:420px">
+        <br><small>Stosowany tylko przy pojedynczym pliku. Przy wielu plikach używane są nazwy plików.</small>
+    </p>
+    <p>
+        <label for="id_mode">Jakość rozpoznawania</label><br>
+        <select id="id_mode" name="mode">
+            <option value="fast">Szybka (CPU) — dobre skany</option>
+            <option value="quality">Wysoka (model AI) — trudne skany i zdjęcia</option>
+        </select>
+    </p>
+    <button type="submit">Prześlij i rozpocznij OCR</button>
+</form>
+{% endblock %}

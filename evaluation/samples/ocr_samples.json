@@ -1,0 +1,7 @@
+[
+  {
+    "file": "skany/faktura.png",
+    "ground_truth": "FAKTURA VAT nr FV/2026/03/0042\nSprzedawca: Neurosoft Sp. z o.o.\nDo zapłaty: 1234,56 zł\nTermin płatności: 14 dni",
+    "mode": "quality"
+  }
+]

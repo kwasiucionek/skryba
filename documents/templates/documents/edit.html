@@ -1,0 +1,44 @@
+{% extends "documents/base.html" %}
+{% load static %}
+{% block head %}
+    {# EasyMDE + FontAwesome — serwowane lokalnie (bez CDN) #}
+    <link rel="stylesheet" href="{% static 'fontawesome/css/font-awesome.min.css' %}">
+    <link rel="stylesheet" href="{% static 'easymde/easymde.min.css' %}">
+    <script src="{% static 'easymde/easymde.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+<h1>Edycja tekstu</h1>
+<p class="doc__meta" style="margin-bottom:1rem">{{ document.title }} ·
+    <a href="{% url 'documents:detail' document.pk %}">powrót do dokumentu</a></p>
+<p class="count">Popraw rozpoznany tekst. Po zapisie dokument zostanie ponownie zaindeksowany, aby wyszukiwanie i RAG korzystały z poprawionej treści.</p>
+
+<form method="post">
+    {% csrf_token %}
+    {% for page in pages %}
+        <h3>Strona {{ page.page_number }}</h3>
+        <textarea class="md-editor" name="page_{{ page.id }}">{{ page.text }}</textarea>
+    {% endfor %}
+    <p>
+        <button type="submit">Zapisz i przeindeksuj</button>
+        <a class="btn-link" href="{% url 'documents:detail' document.pk %}" style="display:inline-block">Anuluj</a>
+    </p>
+</form>
+
+<script>
+    document.querySelectorAll('textarea.md-editor').forEach(function (el) {
+        new EasyMDE({
+            element: el,
+            autoDownloadFontAwesome: false,
+            spellChecker: false,
+            status: false,
+            minHeight: "200px",
+            toolbar: [
+                "bold", "italic", "heading", "|",
+                "quote", "unordered-list", "ordered-list", "|",
+                "link", "code", "table", "|",
+                "preview", "guide",
+            ],
+        });
+    });
+</script>
+{% endblock %}

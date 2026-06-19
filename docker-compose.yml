@@ -1,0 +1,79 @@
+# Skryba — oficjalna ścieżka instalacji.
+# Start:  docker compose up -d --build
+# Konto admina:  docker compose exec web python manage.py createsuperuser
+
+services:
+  web:
+    build: .
+    env_file: .env
+    # Domyślne DATABASE_URL wskazuje na usługę db — działa nawet, gdy .env
+    # jest niepełny. Ustaw własne w .env, by nadpisać (np. inne hasło).
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://skryba:skryba@db:5432/skryba}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    volumes:
+      - app_data:/app/data
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://skryba:skryba@db:5432/skryba}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: python manage.py qcluster
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # PostgreSQL z pgvector + polskim słownikiem FTS (hunspell).
+  db:
+    build: ./db   # pgvector + polski słownik FTS (hunspell)
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-skryba}
+      POSTGRES_USER: ${POSTGRES_USER:-skryba}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-skryba}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-skryba}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Obserwator katalogu — wrzucasz pliki do data/inbox, same się przetwarzają.
+  # Włącz:  docker compose --profile inbox up -d
+  inbox:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://skryba:skryba@db:5432/skryba}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: python manage.py watch_inbox
+    profiles: ["inbox"]
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  app_data:
+  pg_data:

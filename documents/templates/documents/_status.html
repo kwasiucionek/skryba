@@ -1,0 +1,12 @@
+{% if document.status == "done" or document.status == "failed" %}
+<div hx-get="{% url 'documents:detail' document.pk %}" hx-trigger="load" hx-target="body" hx-push-url="true">
+    <span class="status status--{{ document.status }}">{{ document.get_status_display }}</span>
+</div>
+{% else %}
+<div hx-get="{% url 'documents:status' document.pk %}" hx-trigger="every 2s" hx-swap="outerHTML">
+    <p class="count">
+        <span class="status status--{{ document.status }}">{{ document.get_status_display }}</span>
+        — odśwież za chwilę, przetwarzanie trwa…
+    </p>
+</div>
+{% endif %}

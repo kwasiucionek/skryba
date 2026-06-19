@@ -1,0 +1,19 @@
+# --- Web ---
+Django>=5.0,<5.2
+django-q2>=1.7
+whitenoise>=6.6
+gunicorn>=22.0
+
+# --- OCR / przetwarzanie ---
+pymupdf>=1.24          # render PDF, warstwa tekstowa
+pytesseract>=0.3.10    # silnik FAST (CPU)
+Pillow>=10.0
+opencv-python-headless>=4.9   # deskew (Hough Lines), CLAHE
+numpy>=1.26
+requests>=2.31         # silnik QUALITY (Ollama API)
+pydantic>=2.6          # walidacja structured output z LLM
+
+# --- Baza (opcjonalnie PostgreSQL przy fazie RAG) ---
+pgvector>=0.3            # pole wektorowe + zapytania (faza 3)
+dj-database-url>=2.1
+psycopg2-binary>=2.9

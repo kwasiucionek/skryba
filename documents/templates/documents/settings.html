@@ -1,0 +1,26 @@
+{% extends "documents/base.html" %}
+{% block content %}
+<h1>Ustawienia</h1>
+
+<div class="panel">
+    <h2>Prompt ekstrakcji metadanych</h2>
+    <p class="count">Dostosuj instrukcję systemową dla AI przy wyodrębnianiu metadanych —
+    np. dodaj wskazówki branżowe („to polskie pisma sądowe”, „kwoty zwykle w PLN”).
+    Struktura wyjścia JSON jest stała i zarządzana przez aplikację, więc nie musisz jej
+    opisywać. Puste pole = prompt domyślny.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <textarea name="extraction_prompt" rows="6" style="width:100%"
+            placeholder="Pozostaw puste, aby użyć domyślnego promptu.">{{ cfg.extraction_prompt }}</textarea>
+        <p style="margin-top:.6rem"><button type="submit">Zapisz</button></p>
+    </form>
+
+    <details style="margin-top:.5rem">
+        <summary style="cursor:pointer;color:var(--accent-ink)">Pokaż prompt domyślny</summary>
+        <pre>{{ default_prompt }}</pre>
+    </details>
+    <p class="count" style="margin-top:.5rem">Po zmianie użyj „Ponów metadane” na istniejących
+    dokumentach, aby zastosować nowy prompt. Nowe dokumenty użyją go automatycznie.</p>
+</div>
+{% endblock %}

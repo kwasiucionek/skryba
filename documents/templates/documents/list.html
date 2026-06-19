@@ -1,0 +1,69 @@
+{% extends "documents/base.html" %}
+{% block content %}
+<h1>Archiwum</h1>
+
+<form method="get" class="filters">
+    <div class="filter-row">
+        <input type="text" name="q" value="{{ f.q }}" placeholder="Szukaj w treści, kontrahencie, numerze…" style="min-width:280px">
+        <select name="type">
+            <option value="">Typ: wszystkie</option>
+            {% for value, label in doc_types %}
+                <option value="{{ value }}" {% if value == f.type %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        {% if available_tags %}
+        <select name="tag">
+            <option value="">Tag: wszystkie</option>
+            {% for t in available_tags %}
+                <option value="{{ t }}" {% if t == f.tag %}selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+    </div>
+    <div class="filter-row">
+        <label>Data od <input type="date" name="date_from" value="{{ f.date_from }}"></label>
+        <label>do <input type="date" name="date_to" value="{{ f.date_to }}"></label>
+        <label>Kwota od <input type="number" step="0.01" name="amount_min" value="{{ f.amount_min }}" style="width:110px"></label>
+        <label>do <input type="number" step="0.01" name="amount_max" value="{{ f.amount_max }}" style="width:110px"></label>
+        <button type="submit">Filtruj</button>
+        {% if has_filters %}<a href="{% url 'documents:list' %}">wyczyść</a>{% endif %}
+    </div>
+</form>
+
+<p class="count">Znaleziono: {{ count }}</p>
+
+{% if count %}
+<div class="export-bar">
+    <span>Eksport:</span>
+    <a class="btn-link" href="{% url 'documents:export_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">CSV (metadane)</a>
+    <a class="btn-link" href="{% url 'documents:export_zip' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">ZIP (z plikami)</a>
+    {% if has_filters %}<small>— zgodnie z aktywnymi filtrami</small>{% endif %}
+</div>
+{% endif %}
+
+{% for doc in documents %}
+    <div class="doc" data-type="{{ doc.doc_type }}">
+        <div>
+            <a class="doc__title" href="{% url 'documents:detail' doc.pk %}">{{ doc.title }}</a>
+            <span class="status status--{{ doc.status }}">{{ doc.get_status_display }}</span>
+            {% if doc.doc_type %}<span class="badge">{{ doc.get_doc_type_display }}</span>{% endif %}
+            {% if doc.amount %}<span class="badge">{{ doc.amount }} {{ doc.currency }}</span>{% endif %}
+        </div>
+        <div class="doc__meta">
+            {% if doc.counterparty %}{{ doc.counterparty }} · {% endif %}
+            {% if doc.doc_date %}{{ doc.doc_date|date:"Y-m-d" }} · {% endif %}
+            dodano {{ doc.created_at|date:"Y-m-d H:i" }}
+        </div>
+        {% if doc.summary %}<p class="doc__summary">{{ doc.summary }}</p>{% endif %}
+        {% if doc.tags %}<div class="doc__tags">{% for tag in doc.tags %}<span class="badge">{{ tag }}</span> {% endfor %}</div>{% endif %}
+    </div>
+{% empty %}
+    <div class="panel">
+        {% if has_filters %}
+            <p>Nic nie pasuje do tych kryteriów. <a href="{% url 'documents:list' %}">Wyczyść filtry</a>, aby zobaczyć wszystko.</p>
+        {% else %}
+            <p>Archiwum jest jeszcze puste. <a href="{% url 'documents:upload' %}">Dodaj pierwszy dokument</a> — rozpoznamy tekst i wyodrębnimy metadane.</p>
+        {% endif %}
+    </div>
+{% endfor %}
+{% endblock %}
