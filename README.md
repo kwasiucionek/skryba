@@ -10,6 +10,11 @@ wizyjnego (VLM) przez Ollamę (lokalnie na GPU albo w chmurze). Dzięki temu
 działa zarówno na słabym serwerze bez GPU, jak i daje topową jakość tam,
 gdzie jej potrzeba.
 
+
+Demo: skryba.cytr.us
+login: test
+hasło: testskryba
+
 > Status: wczesny etap (faza 1 — silnik OCR). Patrz [Mapa drogowa](#mapa-drogowa).
 
 ## Dlaczego
