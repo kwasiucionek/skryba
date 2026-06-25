@@ -10,7 +10,7 @@
 <div class="actions">
     <a class="btn-link" href="{% url 'documents:edit' document.pk %}">Edytuj tekst</a>
     {% if document.searchable_pdf %}
-        <a class="btn-link" href="{{ document.searchable_pdf.url }}" download>Pobierz PDF z tekstem</a>
+        <a class="btn-link" href="{% url 'documents:pdf' document.pk %}">Pobierz PDF z tekstem</a>
     {% endif %}
     <form method="post" action="{% url 'documents:reprocess' document.pk 'ocr' %}"
           onsubmit="return confirm('Ponowny OCR nadpisze obecny tekst, metadane i indeks. Kontynuować?')">

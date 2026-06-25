@@ -386,3 +386,44 @@ def test_rebuild_searchable_pdf_saves_file(monkeypatch, user, settings, tmp_path
     doc.refresh_from_db()
     assert doc.searchable_pdf
     assert doc.searchable_pdf.name.endswith("_ocr.pdf")
+
+
+# --- Chronione pobieranie plików ---
+
+@pytest.mark.django_db
+def test_protected_pdf_download(client_logged, user, settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    from django.core.files.base import ContentFile
+    doc = Document.objects.create(owner=user, title="D", status="done")
+    doc.searchable_pdf.save("d_ocr.pdf", ContentFile(b"%PDF-1.4"), save=True)
+    r = client_logged.get(f"/{doc.id}/pdf/")
+    assert r.status_code == 200
+    assert r["Content-Disposition"].startswith("attachment")
+
+
+@pytest.mark.django_db
+def test_protected_pdf_owner_only(user, settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    from django.core.files.base import ContentFile
+    doc = Document.objects.create(owner=user, title="D", status="done")
+    doc.searchable_pdf.save("d_ocr.pdf", ContentFile(b"%PDF"), save=True)
+    other = get_user_model().objects.create_user("intruz_dl", password="x")
+    c = Client()
+    c.force_login(other)
+    assert c.get(f"/{doc.id}/pdf/").status_code == 404
+
+
+@pytest.mark.django_db
+def test_protected_pdf_requires_login(user):
+    doc = Document.objects.create(owner=user, title="D", status="done")
+    assert Client().get(f"/{doc.id}/pdf/").status_code == 302  # redirect do logowania
+
+
+@pytest.mark.django_db
+def test_protected_file_download(client_logged, user, settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    from django.core.files.base import ContentFile
+    doc = Document.objects.create(owner=user, title="D", status="done")
+    doc.file.save("orig.pdf", ContentFile(b"%PDF-1.4"), save=True)
+    r = client_logged.get(f"/{doc.id}/file/")
+    assert r.status_code == 200

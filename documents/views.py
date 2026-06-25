@@ -12,7 +12,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -242,6 +242,30 @@ def document_detail(request, pk):
     return render(
         request, "documents/detail.html",
         {"document": doc, "custom_rows": custom_rows},
+    )
+
+
+@login_required
+def serve_searchable_pdf(request, pk):
+    """Chronione pobieranie przeszukiwalnego PDF (tylko właściciel)."""
+    doc = get_object_or_404(Document, pk=pk, owner=request.user)
+    if not doc.searchable_pdf:
+        raise Http404
+    return FileResponse(
+        doc.searchable_pdf.open("rb"), as_attachment=True,
+        filename=os.path.basename(doc.searchable_pdf.name),
+    )
+
+
+@login_required
+def serve_file(request, pk):
+    """Chronione pobieranie oryginalnego pliku (tylko właściciel)."""
+    doc = get_object_or_404(Document, pk=pk, owner=request.user)
+    if not doc.file:
+        raise Http404
+    return FileResponse(
+        doc.file.open("rb"), as_attachment=True,
+        filename=os.path.basename(doc.file.name),
     )
 
 

@@ -1,0 +1,7 @@
+# Tryb "za nginx" (jak pozostałe aplikacje cytr.us): kontener web wystawiony
+# tylko na 127.0.0.1, a nginx na hoście (port z Mikrusa) proxuje do niego.
+# Użycie:  cp docker-compose.override.example.yml docker-compose.override.yml
+services:
+  web:
+    ports:
+      - "127.0.0.1:8000:8000"
