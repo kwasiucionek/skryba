@@ -10,12 +10,15 @@ wizyjnego (VLM) przez Ollamę (lokalnie na GPU albo w chmurze). Dzięki temu
 działa zarówno na słabym serwerze bez GPU, jak i daje topową jakość tam,
 gdzie jej potrzeba.
 
+> Status: kompletny i gotowy do użycia — OCR (fast/quality), archiwum z
+> ekstrakcją metadanych i polami użytkownika, RAG z polskim wyszukiwaniem,
+> eksport i ewaluacja. Patrz [Mapa drogowa](#mapa-drogowa).
 
-Demo: skryba.cytr.us
-login: test
-hasło: testskryba
+## Demo
 
-> Status: wczesny etap (faza 1 — silnik OCR). Patrz [Mapa drogowa](#mapa-drogowa).
+**Demo:** skryba.cytr.us
+**Login:** test
+**Hasło:** testskryba
 
 ## Dlaczego
 
@@ -40,13 +43,21 @@ hasło: testskryba
                  │        └─ QUALITY  → Ollama VLM (GPU/cloud) │
                  └───────────────────────────────────────────┘
                                 │
-        Django (web)  ◄── django-q2 worker ──►  baza (SQLite / PostgreSQL)
+        Django (web)  ◄── django-q2 worker ──►  PostgreSQL + pgvector
+                          (OCR → ekstrakcja → indeksacja, etapy rozłączne)
 ```
 
-- **`ocr/`** — rdzeń niezależny od Django: silniki, preprocessing, PDF,
-  pipeline. Można używać jako biblioteki.
-- **`documents/`** — aplikacja Django: modele, upload, widoki (HTMX),
-  zadanie OCR w tle.
+Rdzeń jest niezależny od Django (można używać jako biblioteki):
+
+- **`ocr/`** — silniki OCR (router fast/quality), preprocessing, pipeline, PDF.
+- **`extraction/`** — klasyfikacja i ekstrakcja metadanych oraz pól użytkownika (LLM).
+- **`rag/`** — chunking, embeddingi, generacja odpowiedzi z cytowaniem źródeł.
+- **`evaluation/`** — metryki jakości (CER/WER dla OCR, recall@k/MRR dla RAG).
+
+Warstwa Django:
+
+- **`documents/`** — modele, upload (też wsadowy), widoki (HTMX), zadania w tle
+  (OCR → ekstrakcja → indeksacja), wyszukiwanie hybrydowe, edycja, eksport.
 - **`config/`** — projekt Django.
 
 ## Szybki start
@@ -60,18 +71,26 @@ docker compose exec web python manage.py createsuperuser
 
 Aplikacja: <http://localhost:8000> · Panel admina: <http://localhost:8000/admin>
 
+> **Co działa od razu, a co wymaga Ollamy.** Tryb OCR `fast` (Tesseract/CPU)
+> działa bez niczego więcej. Tryb `quality`, ekstrakcja metadanych i RAG
+> korzystają z Ollamy — wskaż ją przez `OLLAMA_BASE_URL` (lokalny daemon albo
+> chmura). Do **RAG potrzebny jest lokalny model embeddingów**:
+> `ollama pull nomic-embed-text`. Bez Ollamy archiwum nadal działa (OCR fast,
+> przegląd, edycja, eksport), ale wyszukiwanie semantyczne i „Zapytaj archiwum”
+> pozostaną puste.
+
 ### Tryb QUALITY (Ollama)
 
 W `.env`:
 
 ```
 OCR_DEFAULT_MODE=quality
-OCR_OLLAMA_MODEL=kimi-k2.6-cloud
+OCR_OLLAMA_MODEL=kimi-k2.6:cloud
 OLLAMA_API_KEY=twoj-klucz        # tylko dla Ollama Cloud
 ```
 
 Dla modelu lokalnego na GPU wskaż `OLLAMA_BASE_URL` na swoją instancję
-i użyj taga bez sufiksu `-cloud`.
+i użyj taga bez sufiksu `:cloud`.
 
 ## Konfiguracja
 
@@ -80,9 +99,9 @@ Wszystko przez `.env` — pełna lista w `.env.example`. Najważniejsze:
 | Zmienna | Znaczenie | Domyślnie |
 |---|---|---|
 | `OCR_DEFAULT_MODE` | `fast` (CPU) lub `quality` (VLM) | `fast` |
-| `OCR_OLLAMA_MODEL` | model VLM dla trybu quality | `kimi-k2.6-cloud` |
+| `OCR_OLLAMA_MODEL` | model VLM dla trybu quality | `kimi-k2.6:cloud` |
 | `OCR_TESSERACT_LANG` | języki Tesseracta | `pol+eng` |
-| `DATABASE_URL` | puste = SQLite; `postgres://…` = PostgreSQL | SQLite |
+| `DATABASE_URL` | połączenie do PostgreSQL (wymagany dla RAG/pgvector) | usługa `db` z compose |
 
 ## Mapa drogowa
 
@@ -100,6 +119,11 @@ Wszystko przez `.env` — pełna lista w `.env.example`. Najważniejsze:
   embeddingi przez Ollamę), wyszukiwanie hybrydowe (semantyka + pełny tekst,
   fuzja Reciprocal Rank Fusion) i strona „Zapytaj archiwum" — odpowiedzi LLM
   z odwołaniami do źródeł, w pełni lokalnie.
+- **Dojrzałość** *(gotowe)*: edycja rozpoznanego tekstu z regeneracją
+  przeszukiwalnego PDF, ponawianie etapów (OCR / metadane / indeks) z UI,
+  wsadowy upload, chronione pobieranie plików (tylko właściciel), pola
+  użytkownika, własny prompt ekstrakcji, eksport CSV/ZIP, harness ewaluacyjny,
+  hardening produkcyjny, testy + CI. Wdrożenie na VPS: [`deploy/mikrus.md`](deploy/mikrus.md).
 
 ## Wdrożenie produkcyjne
 
@@ -179,18 +203,19 @@ Zbiór RAG to lista `{"question": "...", "relevant_titles": ["..."], "expected_s
 
 ## Rozwiązywanie problemów
 
-**Tryb Jakość daje słaby/bełkotliwy tekst, nagłówek pokazuje „(ocr, tesseract)".**
-Ollama jest nieosiągalna z kontenera, więc OCR poszedł Tesseractem. Na Linuksie
-Ollama domyślnie słucha tylko na `127.0.0.1` — ustaw na hoście `OLLAMA_HOST=0.0.0.0`
-(patrz komentarz w `.env.example`) i upewnij się, że `OLLAMA_BASE_URL` w `.env` to
-`http://host.docker.internal:11434`. Test z kontenera:
+**Tryb Jakość zgłasza „Silnik QUALITY (Ollama) niedostępny…".**
+Ollama jest nieosiągalna z kontenera (router QUALITY nie robi cichego fallbacku na
+Tesseract — zgłasza czytelny błąd). Na Linuksie Ollama domyślnie słucha tylko na
+`127.0.0.1` — ustaw na hoście `OLLAMA_HOST=0.0.0.0` (patrz komentarz w `.env.example`)
+i upewnij się, że `OLLAMA_BASE_URL` w `.env` to `http://host.docker.internal:11434`.
+Test z kontenera:
 
 ```bash
 docker compose exec worker python -c "import requests; print(requests.get('http://host.docker.internal:11434/api/tags').status_code)"
 ```
 
-Powinno zwrócić `200`. Po naprawie usuń dokument i wgraj go ponownie — OCR rusza
-od nowa dopiero przy nowym uploadzie.
+Powinno zwrócić `200`. Po naprawie kliknij **„Ponów OCR"** na stronie dokumentu —
+nie trzeba usuwać i wgrywać ponownie. Tak samo „Ponów metadane" i „Przeindeksuj (RAG)".
 
 **`password authentication failed` / web restartuje się w pętli.** Hasło Postgresa
 jest ustawiane tylko przy pierwszej inicjalizacji wolumenu. Po zmianie hasła w `.env`
