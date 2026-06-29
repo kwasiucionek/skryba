@@ -1,0 +1,30 @@
+{% extends "documents/base.html" %}
+{% block content %}
+<div class="auth">
+    <h1>Logowanie</h1>
+
+    {% if form.errors %}
+        <div class="msg msg--error">Niepoprawny login lub hasło. Spróbuj ponownie.</div>
+    {% endif %}
+
+    <form method="post" action="{% url 'documents:login' %}" class="panel">
+        {% csrf_token %}
+        <p>
+            <label for="{{ form.username.id_for_label }}">Login</label><br>
+            {{ form.username }}
+        </p>
+        <p>
+            <label for="{{ form.password.id_for_label }}">Hasło</label><br>
+            {{ form.password }}
+        </p>
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+        <button type="submit">Zaloguj</button>
+    </form>
+
+    <div class="panel auth__demo">
+        <strong>Konto demo</strong>
+        <p style="margin:.35rem 0 0">Login: <code>test</code> &middot; Hasło: <code>testskryba</code></p>
+        <p style="margin:.35rem 0 0;font-size:.85rem;color:var(--muted)">Konto publiczne — wgrywaj tylko dokumenty, które mogą być widoczne dla innych.</p>
+    </div>
+</div>
+{% endblock %}

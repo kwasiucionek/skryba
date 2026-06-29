@@ -427,3 +427,39 @@ def test_protected_file_download(client_logged, user, settings, tmp_path):
     doc.file.save("orig.pdf", ContentFile(b"%PDF-1.4"), save=True)
     r = client_logged.get(f"/{doc.id}/file/")
     assert r.status_code == 200
+
+
+# --- Strona logowania (demo) ---
+
+@pytest.mark.django_db
+def test_login_page_shows_demo_credentials(client):
+    r = client.get("/login/")
+    assert r.status_code == 200
+    body = r.content.decode()
+    assert "Konto demo" in body
+    assert "<code>test</code>" in body
+    assert "<code>testskryba</code>" in body
+
+
+@pytest.mark.django_db
+def test_login_flow_redirects_to_list(client, django_user_model):
+    django_user_model.objects.create_user(username="test", password="testskryba")
+    r = client.post("/login/", {"username": "test", "password": "testskryba"})
+    assert r.status_code == 302
+    assert r.url == "/"
+
+
+@pytest.mark.django_db
+def test_login_redirects_authenticated_user(client_logged):
+    assert client_logged.get("/login/").status_code == 302
+
+
+@pytest.mark.django_db
+def test_logout_post(client_logged):
+    assert client_logged.post("/logout/").status_code == 302
+
+
+@pytest.mark.django_db
+def test_nav_logout_only_when_authenticated(client, client_logged):
+    assert "nav-logout" not in client.get("/login/").content.decode()
+    assert "nav-logout" in client_logged.get("/").content.decode()

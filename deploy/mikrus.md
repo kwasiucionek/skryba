@@ -32,6 +32,8 @@ SECRET_KEY=<wygenerowany>
 ALLOWED_HOSTS=skryba.cytr.us,pro01.mikr.us
 CSRF_TRUSTED_ORIGINS=https://skryba.cytr.us
 SECURE_SSL_REDIRECT=false          # Cloudflare->origin idzie po HTTP (patrz §5)
+WEB_BIND=127.0.0.1                 # web tylko na localhost, nginx go proxuje
+WEB_PORT=8000
 
 POSTGRES_PASSWORD=<silne-haslo>
 DATABASE_URL=postgres://skryba:<silne-haslo>@db:5432/skryba
@@ -63,8 +65,11 @@ print(requests.get('http://host.docker.internal:11434/api/tags').status_code)"`.
 
 ## 4. Start (web tylko na localhost, za nginx)
 
+`WEB_BIND=127.0.0.1` i `WEB_PORT=8000` z `.env` sprawiają, że kontener web
+słucha tylko na `127.0.0.1:8000` — nginx (port z Mikrusa) proxuje do niego.
+Nie publikuj web wprost na porcie Mikrusa, bo zderzy się z nginx.
+
 ```bash
-cp docker-compose.override.example.yml docker-compose.override.yml   # web -> 127.0.0.1:8000
 docker compose up -d --build
 docker compose exec web python manage.py createsuperuser
 curl -I http://127.0.0.1:8000/      # oczekiwane: 302 (redirect do logowania)
@@ -92,9 +97,10 @@ po HTTP — dlatego `SECURE_SSL_REDIRECT=false` (inaczej pętla przekierowań).
 
 ## Alternatywa: bez nginx (prościej, mniej kontroli)
 
-Jeśli nie chcesz nginx, pomiń override i §5 — ustaw w `.env` `WEB_PORT=<port>`,
-wtedy kontener web wystawia się wprost na port Mikrusa. Tracisz kontrolę nad
-limitem uploadu i nagłówkami na poziomie proxy, ale dla małego ruchu wystarczy.
+Jeśli nie chcesz nginx, pomiń §5 i w `.env` ustaw `WEB_BIND=0.0.0.0` oraz
+`WEB_PORT=<port z Mikrusa>` — kontener web wystawia się wprost na port Mikrusa.
+Tracisz kontrolę nad limitem uploadu i nagłówkami na poziomie proxy, ale dla
+małego ruchu wystarczy. Wtedy NIE uruchamiaj nginx na tym samym porcie.
 
 ## 6. Aktualizacje
 

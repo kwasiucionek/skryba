@@ -15,11 +15,14 @@
             <a class="wordmark" href="{% url 'documents:list' %}">Skryba</a>
             <span class="tagline">Archiwum dokumentów</span>
             <nav class="nav">
+                {% if user.is_authenticated %}
                 <a href="{% url 'documents:list' %}" class="{% if request.resolver_match.url_name == 'list' %}active{% endif %}">Archiwum</a>
                 <a href="{% url 'documents:upload' %}" class="{% if request.resolver_match.url_name == 'upload' %}active{% endif %}">Dodaj dokument</a>
                 <a href="{% url 'documents:ask' %}" class="{% if request.resolver_match.url_name == 'ask' %}active{% endif %}">Zapytaj archiwum</a>
                 <a href="{% url 'documents:custom_fields' %}" class="{% if request.resolver_match.url_name == 'custom_fields' %}active{% endif %}">Pola</a>
                 <a href="{% url 'documents:settings' %}" class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}">Ustawienia</a>
+                <form method="post" action="{% url 'documents:logout' %}" class="nav-logout">{% csrf_token %}<button type="submit">Wyloguj</button></form>
+                {% endif %}
             </nav>
         </div>
     </header>
